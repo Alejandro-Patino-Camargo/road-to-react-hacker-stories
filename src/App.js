@@ -1,18 +1,14 @@
-import  * as React from 'react';
+import * as React from "react";
+import TodoList from "./todoList.js";
+import AddTodoForm from "./AddTodoForm.js";
 
-
-function getTitle(title){
-  return title;
-}
-
-function  App() {
+function App() {
   return (
-  <div>
-  <h1>Hello {getTitle('World')}</h1>
-
-    <lable htmlFor="search"> Search: </lable>
-    <input id="search" type = "text" />
-
+    <div>
+      <h1>My Hacker Stories</h1>
+      <AddTodoForm />
+      <TodoList />
+      <hr />
     </div>
   );
 }
