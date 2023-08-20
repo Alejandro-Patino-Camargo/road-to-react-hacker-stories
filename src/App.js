@@ -1,49 +1,80 @@
 import * as React from "react";
 
-const list = [
-  {
-    title: "NVIM config",
-    author: "Alejandro",
-    url: "LazyVim.com",
-    points: "5",
-    objectID: "0",
-  },
-];
+function App() {
+  const stories = [
+    {
+      title: "NVIM config",
+      author: "Alejandro",
+      url: "LazyVim.com",
+      num_comments: "3",
+      points: "5",
+      objectID: "0",
+    },
+    {
+      title: "Git cook book",
+      author: "some nerd",
+      url: "https://git.seveas.net/",
+      num_comments: "2",
+      points: "3",
+      objectID: "2",
+    },
+  ];
 
-function List() {
-  return (
-    <ul>
-      {list.map(function (items) {
-        return (
-          <li key={items.objectID}>
-            <span>
-              <a href={items.url}>{items.title}</a>
-            </span>
-            <span> by {items.author}</span>
-            <span> {items.points}</span>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
+  function handleSearch(event) {
+    console.log(event.target.value);
+  }
 
-function Search() {
   return (
     <div>
-      <label htmlFor="search">Search</label>
-      <input id="search" type="text" />
+      <h1>Hacker Stories</h1>
+      <Search onSearch={handleSearch} />
+      <hr />
+      <List list={stories} title="React Ecosystem" />
     </div>
   );
 }
 
-function App() {
+function List(props) {
   return (
     <div>
-      <h1>Hacker Stories</h1>
-      <Search />
-      <hr />
-      <List />
+      <h2>{props.title}</h2>
+      <ul>
+        {props.list.map(function (item) {
+          return <Item key={item.objectID} item={item} />;
+        })}
+      </ul>
+    </div>
+  );
+}
+
+const Item = (props) => {
+  const { item } = props;
+  return (
+    <li>
+      <span>
+        <a href={item.url}>{item.title}</a>
+      </span>
+      <span> by {item.author}</span>
+      <span> {item.points}</span>
+    </li>
+  );
+};
+
+function Search(props) {
+  const [searchTerm, setSearchTerm] = React.useState("");
+
+  const handleChange = (event) => {
+    setSearchTerm(event.target.value);
+    props.onSearch(event);
+  };
+
+  return (
+    <div>
+      <label htmlFor="search">Search</label>
+      <input id="search" type="text" onChange={handleChange} />
+      <p>
+        Search for <strong>{searchTerm}</strong>
+      </p>
     </div>
   );
 }
