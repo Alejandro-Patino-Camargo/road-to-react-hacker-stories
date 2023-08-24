@@ -1,82 +1,79 @@
-import * as React from "react";
+import React from "react";
 
-function App() {
+const useSemiPersistentState = (key, initialState) => {
+  const [value, setValue] = React.useState(
+    localStorage.getItem(key) || initialState
+  );
+
+  React.useEffect(() => {
+    localStorage.setItem(key, value);
+  }, [value, key]);
+
+  return [value, setValue];
+};
+
+const App = () => {
   const stories = [
     {
-      title: "NVIM config",
-      author: "Alejandro",
-      url: "LazyVim.com",
-      num_comments: "3",
-      points: "5",
-      objectID: "0",
+      title: "LazyVim ",
+      url: "https://Lazyvim.github.io/",
+      author: "",
+      num_comments: 3,
+      points: 4,
+      objectID: 0,
     },
     {
-      title: "Git cook book",
-      author: "some nerd",
-      url: "https://git.seveas.net/",
-      num_comments: "2",
-      points: "3",
-      objectID: "2",
+      title: "Redux",
+      url: "https://redux.js.org/",
+      author: "Dan Abramov, Andrew Clark",
+      num_comments: 2,
+      points: 5,
+      objectID: 1,
     },
   ];
 
-  function handleSearch(event) {
-    console.log(event.target.value);
-  }
+  const [searchTerm, setSearchTerm] = useSemiPersistentState("search", "React");
+
+  const handleSearch = (event) => {
+    setSearchTerm(event.target.value);
+  };
+
+  const searchedStories = stories.filter((story) =>
+    story.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div>
-      <h1>Hacker Stories</h1>
-      <Search onSearch={handleSearch} />
+      <h1>My Hacker Stories</h1>
+
+      <Search search={searchTerm} onSearch={handleSearch} />
+
       <hr />
-      <List list={stories} title="React Ecosystem" />
-    </div>
-  );
-}
 
-function List(props) {
-  return (
-    <div>
-      <h2>{props.title}</h2>
-      <ul>
-        {props.list.map(function (item) {
-          return <Item key={item.objectID} item={item} />;
-        })}
-      </ul>
+      <List list={searchedStories} />
     </div>
-  );
-}
-
-const Item = (props) => {
-  const { item } = props;
-  return (
-    <li>
-      <span>
-        <a href={item.url}>{item.title}</a>
-      </span>
-      <span> by {item.author}</span>
-      <span> {item.points}</span>
-    </li>
   );
 };
 
-function Search(props) {
-  const [searchTerm, setSearchTerm] = React.useState("");
+const Search = ({ search, onSearch }) => (
+  <>
+    <label htmlFor="search">Search: </label>
+    <input id="search" type="text" value={search} onChange={onSearch} />
+  </>
+);
 
-  const handleChange = (event) => {
-    setSearchTerm(event.target.value);
-    props.onSearch(event);
-  };
+const List = ({ list }) =>
+  list.map((item) => <Item key={item.objectID} item={item} />);
 
-  return (
-    <div>
-      <label htmlFor="search">Search</label>
-      <input id="search" type="text" onChange={handleChange} />
-      <p>
-        Search for <strong>{searchTerm}</strong>
-      </p>
-    </div>
-  );
-}
+const Item = ({ item }) => (
+  <div>
+    <span>
+      <a href={item.url}>{item.title}</a>
+    </span>
+    <span>{item.author}</span>
+    <span>{item.num_comments}</span>
+    <span>{item.points}</span>
+  </div>
+);
 
 export default App;
