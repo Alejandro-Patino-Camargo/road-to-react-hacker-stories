@@ -1,82 +1,133 @@
-import * as React from "react";
+import React from "react";
 
-function App() {
-  const stories = [
-    {
-      title: "NVIM config",
-      author: "Alejandro",
-      url: "LazyVim.com",
-      num_comments: "3",
-      points: "5",
-      objectID: "0",
-    },
-    {
-      title: "Git cook book",
-      author: "some nerd",
-      url: "https://git.seveas.net/",
-      num_comments: "2",
-      points: "3",
-      objectID: "2",
-    },
-  ];
+const initialStories = [
+  {
+    title: "LazyVim ",
+    url: "https://lazyvim.github.io",
+    author: " some nerds",
+    num_comments: 3,
+    points: 4,
+    objectID: 0,
+  },
+  {
+    title: " GitCookBook",
+    url: "https://git.com",
+    author: " yours truly",
+    num_comments: 2,
+    points: 5,
+    objectID: 1,
+  },
+];
 
-  function handleSearch(event) {
-    console.log(event.target.value);
-  }
+const useSemiPersistentState = (key, initialState) => {
+  const [value, setValue] = React.useState(
+    localStorage.getItem(key) || initialState
+  );
+
+  React.useEffect(() => {
+    localStorage.setItem(key, value);
+  }, [value, key]);
+
+  return [value, setValue];
+};
+
+const App = () => {
+  const [searchTerm, setSearchTerm] = useSemiPersistentState("search", "");
+  const [stories, setStories] = React.useState(initialStories);
+
+  const handleRemoveStory = (item) => {
+    // filters through stories based on ID
+    const newStories = stories.filter(
+      (story) => item.objectID !== story.objectID
+    );
+    setStories(newStories);
+  };
+
+  const handleSearch = (event) => {
+    setSearchTerm(event.target.value);
+  };
+
+  const searchedStories = stories.filter((story) =>
+    story.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div>
-      <h1>Hacker Stories</h1>
-      <Search onSearch={handleSearch} />
+      <h1>My Hacker Stories</h1>
+
+      <InputWithLabel
+        id="search"
+        label="Search"
+        value={searchTerm}
+        onInputChange={handleSearch}
+      >
+        <strong> Search:</strong> {/*children*/}
+      </InputWithLabel>
+
       <hr />
-      <List list={stories} title="React Ecosystem" />
+
+      <List list={searchedStories} onRemoveItem={handleRemoveStory} />
     </div>
   );
-}
+};
 
-function List(props) {
+const InputWithLabel = ({
+  id,
+  value,
+  type = "text",
+  onInputChange,
+  isFocused,
+  children,
+}) => {
+  const inputRef = React.useRef();
+
+  React.useEffect(() => {
+    if (isFocused) {
+      inputRef.current.focus();
+    }
+  }, [isFocused]);
+
   return (
-    <div>
-      <h2>{props.title}</h2>
-      <ul>
-        {props.list.map(function (item) {
-          return <Item key={item.objectID} item={item} />;
-        })}
-      </ul>
-    </div>
+    <>
+      <label htmlFor={id}>{children}</label>
+      &nbsp;
+      <input
+        ref={inputRef}
+        id={id}
+        type={type}
+        value={value}
+        onChange={onInputChange}
+      />
+    </>
   );
-}
+};
 
-const Item = (props) => {
-  const { item } = props;
+const List = ({ list, onRemoveItem }) => (
+  <ul>
+    {list.map((item) => (
+      <Item key={item.objectID} item={item} onRemoveItem={onRemoveItem} />
+    ))}
+  </ul>
+);
+
+const Item = ({ item, onRemoveItem }) => {
+  const handleRemoveItem = () => {
+    onRemoveItem(item);
+  };
   return (
     <li>
       <span>
         <a href={item.url}>{item.title}</a>
       </span>
-      <span> by {item.author}</span>
-      <span> {item.points}</span>
+      <span>{item.author}</span> <span>{item.num_comments}</span>
+      <span>{item.points}</span>
+      <span>
+        <button type="button" onClick={handleRemoveItem}>
+          Remove
+        </button>
+      </span>
     </li>
   );
 };
-
-function Search(props) {
-  const [searchTerm, setSearchTerm] = React.useState("");
-
-  const handleChange = (event) => {
-    setSearchTerm(event.target.value);
-    props.onSearch(event);
-  };
-
-  return (
-    <div>
-      <label htmlFor="search">Search</label>
-      <input id="search" type="text" onChange={handleChange} />
-      <p>
-        Search for <strong>{searchTerm}</strong>
-      </p>
-    </div>
-  );
-}
 
 export default App;
