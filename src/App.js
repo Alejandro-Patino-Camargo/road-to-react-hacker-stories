@@ -1,40 +1,7 @@
-import React from "react";
-
-const initialStories = [
-  {
-    title: "LazyVim ",
-    url: "https://lazyvim.github.io",
-    author: " some nerds",
-    num_comments: 3,
-    points: 4,
-    objectID: 0,
-  },
-  {
-    title: " GitCookBook",
-    url: "https://git.com",
-    author: " yours truly",
-    num_comments: 2,
-    points: 5,
-    objectID: 1,
-  },
-];
-
-const getAsyncStories = () =>
-  new Promise((resolve) =>
-    setTimeout(() => resolve({ data: { stories: initialStories } }), 2000)
-  );
-
-const useSemiPersistentState = (key, initialState) => {
-  const [value, setValue] = React.useState(
-    localStorage.getItem(key) || initialState
-  );
-
-  React.useEffect(() => {
-    localStorage.setItem(key, value);
-  }, [value, key]);
-
-  return [value, setValue];
-};
+import * as React from "react";
+import axios from "axios";
+import styles from "./App.module.css";
+import clsx from "clsx";
 
 const storiesReducer = (state, action) => {
   switch (action.type) {
@@ -69,26 +36,47 @@ const storiesReducer = (state, action) => {
   }
 };
 
+const useStorageState = (key, initialState) => {
+  const [value, setValue] = React.useState(
+    localStorage.getItem(key) || initialState
+  );
+
+  React.useEffect(() => {
+    localStorage.setItem(key, value);
+  }, [value, key]);
+
+  return [value, setValue];
+};
+
+const API_ENDPOINT = "https://hn.algolia.com/api/v1/search?query=";
+
 const App = () => {
-  const [searchTerm, setSearchTerm] = useSemiPersistentState("search", "React");
+  const [searchTerm, setSearchTerm] = useStorageState("search", "React");
+  const [url, setUrl] = React.useState(`${API_ENDPOINT}${searchTerm}`);
   const [stories, dispatchStories] = React.useReducer(storiesReducer, {
     data: [],
     isLoading: false,
     isError: false,
   });
 
-  React.useEffect(() => {
+  const handleFetchStories = React.useCallback(async () => {
     dispatchStories({ type: "STORIES_FETCH_INIT" });
 
-    getAsyncStories()
-      .then((result) => {
-        dispatchStories({
-          type: "STORIES_FETCH_SUCCESS",
-          payload: result.data.stories,
-        });
-      })
-      .catch(() => dispatchStories({ type: "STORIES_FETCH_FAILURE" }));
-  }, []);
+    try {
+      const result = await axios.get(url);
+
+      dispatchStories({
+        type: "STORIES_FETCH_SUCCESS",
+        payload: result.data.hits,
+      });
+    } catch {
+      dispatchStories({ type: "STORIES_FETCH_FAILURE" });
+    }
+  }, [url]);
+
+  React.useEffect(() => {
+    handleFetchStories();
+  }, [handleFetchStories]);
 
   const handleRemoveStory = (item) => {
     dispatchStories({
@@ -97,39 +85,55 @@ const App = () => {
     });
   };
 
-  const handleSearch = (event) => {
+  const handleSearchInput = (event) => {
     setSearchTerm(event.target.value);
   };
 
-  const searchedStories = stories.data.filter((story) =>
-    story.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleSearchSubmit = (event) => {
+    setUrl(`${API_ENDPOINT}${searchTerm}`);
+    event.preventDefault();
+  };
 
   return (
-    <div>
-      <h1>My Hacker Stories</h1>
+    <div className={styles.container}>
+      <h1 className={styles.headlinePrimary}>My Hacker Stories</h1>
 
-      <InputWithLabel
-        id="search"
-        value={searchTerm}
-        isFocused
-        onInputChange={handleSearch}
-      >
-        <strong>Search:</strong>
-      </InputWithLabel>
-
-      <hr />
+      <SearchForm
+        searchTerm={searchTerm}
+        onSearchInput={handleSearchInput}
+        onSearchSubmit={handleSearchSubmit}
+      />
 
       {stories.isError && <p>Something went wrong ...</p>}
 
       {stories.isLoading ? (
         <p>Loading ...</p>
       ) : (
-        <List list={searchedStories} onRemoveItem={handleRemoveStory} />
+        <List list={stories.data} onRemoveItem={handleRemoveStory} />
       )}
     </div>
   );
 };
+
+const SearchForm = ({ searchTerm, onSearchInput, onSearchSubmit }) => (
+  <form onSubmit={onSearchSubmit} className={styles.SearchForm}>
+    <InputWithLabel
+      id="search"
+      value={searchTerm}
+      isFocused
+      onInputChange={onSearchInput}
+    >
+      <strong>Search:</strong>
+    </InputWithLabel>
+    <button
+      type="submit"
+      disabled={!searchTerm}
+      className={`${styles.button}${styles.buttonLarge}`}
+    >
+      Submit
+    </button>
+  </form>
+);
 
 const InputWithLabel = ({
   id,
@@ -142,14 +146,16 @@ const InputWithLabel = ({
   const inputRef = React.useRef();
 
   React.useEffect(() => {
-    if (isFocused) {
+    if (isFocused && inputRef.current) {
       inputRef.current.focus();
     }
   }, [isFocused]);
 
   return (
     <>
-      <label htmlFor={id}>{children}</label>
+      <label htmlFor={id} className="styles.label">
+        {children}
+      </label>
       &nbsp;
       <input
         ref={inputRef}
@@ -157,31 +163,38 @@ const InputWithLabel = ({
         type={type}
         value={value}
         onChange={onInputChange}
+        className={styles.input}
       />
     </>
   );
 };
 
-const List = ({ list, onRemoveItem }) =>
-  list.map((item) => (
-    <Item key={item.objectID} item={item} onRemoveItem={onRemoveItem} />
-  ));
+const List = ({ list, onRemoveItem }) => (
+  <ul>
+    {list.map((item) => (
+      <Item key={item.objectID} item={item} onRemoveItem={onRemoveItem} />
+    ))}
+  </ul>
+);
 
 const Item = ({ item, onRemoveItem }) => (
-  <div>
-    <span>
+  <li className={styles.item}>
+    <span style={{ width: "width 40%" }}>
       <a href={item.url}>{item.title}</a>
     </span>
-    <span>{item.author}</span>
-    <span>{item.num_comments}</span>
-    <span>{item.points}</span>
-    <span>
-      {" "}
-      <button type="button" onClick={() => onRemoveItem(item)}>
+    <span style={{ width: "30%" }}>{item.author}</span>
+    <span style={{ width: "10%" }}>{item.num_comments}</span>
+    <span style={{ width: "30%" }}>{item.points}</span>
+    <span style={{ width: "30%" }}>
+      <button
+        type="button"
+        onClick={() => onRemoveItem(item)}
+        className={`${styles.button}${styles.buttonSmall}`}
+      >
         Dismiss
       </button>
     </span>
-  </div>
+  </li>
 );
 
 export default App;
